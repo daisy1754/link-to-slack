@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(SLACK_BOT_TOKEN=xoxb-test SLACK_RECIPIENT_USER_ID=U123456 ./gradlew assembleDebug:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
