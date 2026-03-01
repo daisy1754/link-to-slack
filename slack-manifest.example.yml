@@ -1,0 +1,16 @@
+display_information:
+  name: slack-to-link
+  description: send link as DM
+  background_color: "#0047AB"
+features:
+  bot_user:
+    display_name: slack-to-link
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - im:write
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
