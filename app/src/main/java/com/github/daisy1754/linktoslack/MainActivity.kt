@@ -5,8 +5,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,71 +44,38 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShareScreen(sharedText: String, onFinish: () -> Unit) {
     val repo = remember { SlackRepository() }
     val scope = rememberCoroutineScope()
 
-    var isSending by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Send to Slack") }) }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text("Content", style = MaterialTheme.typography.labelLarge)
-            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = sharedText.ifBlank { "(empty)" },
-                    modifier = Modifier.padding(12.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+    LaunchedEffect(Unit) {
+        scope.launch {
+            runCatching {
+                val token = BuildConfig.SLACK_BOT_TOKEN
+                val userId = BuildConfig.SLACK_RECIPIENT_USER_ID
+                val channelId = repo.openDmChannel(token, userId)
+                repo.sendMessage(token, channelId, sharedText)
+            }.onSuccess {
+                onFinish()
+            }.onFailure { e ->
+                errorMessage = e.message ?: "Failed to send"
             }
+        }
+    }
 
-            errorMessage?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            Button(
-                onClick = {
-                    isSending = true
-                    errorMessage = null
-                    scope.launch {
-                        runCatching {
-                            val token = BuildConfig.SLACK_BOT_TOKEN
-                            val userId = BuildConfig.SLACK_RECIPIENT_USER_ID
-                            val channelId = repo.openDmChannel(token, userId)
-                            repo.sendMessage(token, channelId, sharedText)
-                        }.onSuccess {
-                            onFinish()
-                        }.onFailure { e ->
-                            errorMessage = e.message ?: "Failed to send"
-                            isSending = false
-                        }
-                    }
-                },
-                enabled = !isSending && sharedText.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (isSending) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Send")
-                }
-            }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(32.dp)
+            )
+        } else {
+            CircularProgressIndicator()
         }
     }
 }
